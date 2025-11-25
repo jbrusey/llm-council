@@ -32,7 +32,16 @@ npm install
 cd ..
 ```
 
-### 2. Configure API Key
+### 2. Configure API Provider
+
+Choose the LLM provider via environment variable:
+
+```bash
+# Options: openrouter (default) or ollama
+LLM_PROVIDER=openrouter
+```
+
+When using OpenRouter, also configure your API key:
 
 Create a `.env` file in the project root:
 
@@ -41,6 +50,13 @@ OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
 Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purchase the credits you need, or sign up for automatic top up.
+
+For Ollama, set the provider and (optionally) override the API URL if your server is not at the default location:
+
+```bash
+LLM_PROVIDER=ollama
+OLLAMA_API_URL=http://localhost:11434/api/chat
+```
 
 ### 3. Configure Models (Optional)
 
