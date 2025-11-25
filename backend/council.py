@@ -2,7 +2,13 @@
 
 from typing import List, Dict, Any, Tuple
 from .llm_client import query_models_parallel, query_model
-from .config import COUNCIL_MODELS, CHAIRMAN_MODEL
+from .config import (
+    COUNCIL_MODELS,
+    CHAIRMAN_MODEL,
+    TITLE_MODEL,
+    LLM_PROVIDER,
+    LOCAL_DEFAULT_MODEL,
+)
 
 
 async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
@@ -159,17 +165,23 @@ Provide a clear, well-reasoned final answer that represents the council's collec
     messages = [{"role": "user", "content": chairman_prompt}]
 
     # Query the chairman model
-    response = await query_model(CHAIRMAN_MODEL, messages)
+    chairman_model_used = CHAIRMAN_MODEL
+    response = await query_model(chairman_model_used, messages)
+
+    # Fallback to local default if the requested model is missing when using Ollama
+    if response is None and LLM_PROVIDER == "ollama" and CHAIRMAN_MODEL != LOCAL_DEFAULT_MODEL:
+        chairman_model_used = LOCAL_DEFAULT_MODEL
+        response = await query_model(chairman_model_used, messages)
 
     if response is None:
         # Fallback if chairman fails
         return {
-            "model": CHAIRMAN_MODEL,
+            "model": chairman_model_used,
             "response": "Error: Unable to generate final synthesis."
         }
 
     return {
-        "model": CHAIRMAN_MODEL,
+        "model": chairman_model_used,
         "response": response.get('content', '')
     }
 
@@ -274,8 +286,14 @@ Title:"""
 
     messages = [{"role": "user", "content": title_prompt}]
 
-    # Use gemini-2.5-flash for title generation (fast and cheap)
-    response = await query_model("google/gemini-2.5-flash", messages, timeout=30.0)
+    # Use the configured model for title generation
+    title_model_used = TITLE_MODEL
+    response = await query_model(title_model_used, messages, timeout=30.0)
+
+    # If the preferred model is unavailable on Ollama, fall back to the configured local default
+    if response is None and LLM_PROVIDER == "ollama" and TITLE_MODEL != LOCAL_DEFAULT_MODEL:
+        title_model_used = LOCAL_DEFAULT_MODEL
+        response = await query_model(title_model_used, messages, timeout=30.0)
 
     if response is None:
         # Fallback to a generic title

@@ -73,6 +73,10 @@ COUNCIL_MODELS = [
 CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
 ```
 
+For Ollama deployments, set `LOCAL_DEFAULT_MODEL` to a locally available model name. Both `CHAIRMAN_MODEL` and `TITLE_MODEL`
+default to Ollama-hosted identifiers (falling back to `LOCAL_DEFAULT_MODEL`) so title generation can reuse the same model when
+dedicated options are unavailable.
+
 ## Running the Application
 
 **Option 1: Use the start script**
