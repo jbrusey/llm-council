@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { formatDuration } from '../utils/formatDuration';
 import './Stage1.css';
 
 export default function Stage1({ responses }) {
@@ -8,6 +9,9 @@ export default function Stage1({ responses }) {
   if (!responses || responses.length === 0) {
     return null;
   }
+
+  const activeResponse = responses[activeTab];
+  const queryTime = formatDuration(activeResponse.response_time);
 
   return (
     <div className="stage stage1">
@@ -26,9 +30,14 @@ export default function Stage1({ responses }) {
       </div>
 
       <div className="tab-content">
-        <div className="model-name">{responses[activeTab].model}</div>
+        <div className="model-meta">
+          <div className="model-name">{activeResponse.model}</div>
+          {queryTime && (
+            <div className="query-time">Completed in {queryTime}</div>
+          )}
+        </div>
         <div className="response-text markdown-content">
-          <ReactMarkdown>{responses[activeTab].response}</ReactMarkdown>
+          <ReactMarkdown>{activeResponse.response}</ReactMarkdown>
         </div>
       </div>
     </div>

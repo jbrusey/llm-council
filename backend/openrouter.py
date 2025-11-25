@@ -1,5 +1,6 @@
 """OpenRouter API client for making LLM requests."""
 
+import time
 import httpx
 from typing import List, Dict, Any, Optional
 from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL
@@ -32,6 +33,7 @@ async def query_model(
     }
 
     try:
+        start_time = time.perf_counter()
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 OPENROUTER_API_URL,
@@ -40,12 +42,15 @@ async def query_model(
             )
             response.raise_for_status()
 
+            elapsed = time.perf_counter() - start_time
+
             data = response.json()
             message = data['choices'][0]['message']
 
             return {
                 'content': message.get('content'),
-                'reasoning_details': message.get('reasoning_details')
+                'reasoning_details': message.get('reasoning_details'),
+                'response_time': elapsed,
             }
 
     except Exception as e:

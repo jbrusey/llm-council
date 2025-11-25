@@ -10,12 +10,30 @@
   border: 1px solid #c8e6c8;
 }
 
+.final-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .chairman-label {
   color: #2d8a2d;
   font-size: 12px;
   font-family: monospace;
-  margin-bottom: 12px;
+  margin-bottom: 0;
   font-weight: 600;
+}
+
+.query-time {
+  color: #2d8a2d;
+  font-size: 12px;
+  background: #e8f7e8;
+  border: 1px solid #c8e6c8;
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
 }
 
 .final-text {

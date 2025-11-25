@@ -1,5 +1,6 @@
 """Ollama API client for making LLM requests."""
 
+import time
 import httpx
 from typing import List, Dict, Any, Optional
 from .config import OLLAMA_API_URL
@@ -30,6 +31,7 @@ async def query_model(
     }
 
     try:
+        start_time = time.perf_counter()
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 OLLAMA_API_URL,
@@ -37,16 +39,32 @@ async def query_model(
             )
             response.raise_for_status()
 
+            elapsed = time.perf_counter() - start_time
+
             data = response.json()
             message = data.get("message", {})
 
             return {
                 "content": message.get("content"),
                 "reasoning_details": message.get("reasoning_details"),
+                "response_time": elapsed,
             }
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        detail = exc.response.text
+        request_summary = f"{exc.request.method} {exc.request.url}"
+        print(
+            "Ollama request failed with status "
+            f"{status} for {request_summary}: {detail}"
+        )
+    except httpx.RequestError as exc:
+        print(f"Ollama request error for {getattr(exc.request, 'url', 'unknown URL')}: {exc}")
+    except ValueError as exc:
+        print(f"Error parsing Ollama response for model {model}: {exc}")
     except Exception as e:
-        print(f"Error querying ollama model {model}: {e}")
-        return None
+        print(f"Unexpected error querying ollama model {model}: {e}")
+
+    return None
 
 
 async def query_models_parallel(

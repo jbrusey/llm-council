@@ -32,7 +32,8 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
         if response is not None:  # Only include successful responses
             stage1_results.append({
                 "model": model,
-                "response": response.get('content', '')
+                "response": response.get('content', ''),
+                "response_time": response.get('response_time')
             })
 
     return stage1_results
@@ -112,7 +113,8 @@ Now provide your evaluation and ranking:"""
             stage2_results.append({
                 "model": model,
                 "ranking": full_text,
-                "parsed_ranking": parsed
+                "parsed_ranking": parsed,
+                "response_time": response.get('response_time')
             })
 
     return stage2_results, label_to_model
@@ -177,12 +179,14 @@ Provide a clear, well-reasoned final answer that represents the council's collec
         # Fallback if chairman fails
         return {
             "model": chairman_model_used,
-            "response": "Error: Unable to generate final synthesis."
+            "response": "Error: Unable to generate final synthesis.",
+            "response_time": None,
         }
 
     return {
         "model": chairman_model_used,
-        "response": response.get('content', '')
+        "response": response.get('content', ''),
+        "response_time": response.get('response_time'),
     }
 
 
