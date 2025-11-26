@@ -3,12 +3,9 @@
 from typing import List, Dict, Any, Tuple
 from .llm_client import query_models_parallel, query_model
 from .config import (
-    COUNCIL_MODELS,
-    CHAIRMAN_MODEL,
-    TITLE_MODEL,
-    LLM_PROVIDER,
     LOCAL_DEFAULT_MODEL,
 )
+from .settings import get_settings
 
 
 async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
@@ -21,10 +18,13 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
     Returns:
         List of dicts with 'model' and 'response' keys
     """
+    settings = get_settings()
+    council_models = settings.get("council_models", [])
+
     messages = [{"role": "user", "content": user_query}]
 
     # Query all models in parallel
-    responses = await query_models_parallel(COUNCIL_MODELS, messages)
+    responses = await query_models_parallel(council_models, messages)
 
     # Format results
     stage1_results = []
@@ -53,6 +53,9 @@ async def stage2_collect_rankings(
     Returns:
         Tuple of (rankings list, label_to_model mapping)
     """
+    settings = get_settings()
+    council_models = settings.get("council_models", [])
+
     # Create anonymized labels for responses (Response A, Response B, etc.)
     labels = [chr(65 + i) for i in range(len(stage1_results))]  # A, B, C, ...
 
@@ -102,7 +105,7 @@ Now provide your evaluation and ranking:"""
     messages = [{"role": "user", "content": ranking_prompt}]
 
     # Get rankings from all council models in parallel
-    responses = await query_models_parallel(COUNCIL_MODELS, messages)
+    responses = await query_models_parallel(council_models, messages)
 
     # Format results
     stage2_results = []
@@ -136,6 +139,11 @@ async def stage3_synthesize_final(
     Returns:
         Dict with 'model' and 'response' keys
     """
+    settings = get_settings()
+    chairman_model_used = settings.get("chairman_model", LOCAL_DEFAULT_MODEL)
+    provider = settings.get("llm_provider", "openrouter")
+    local_default_model = settings.get("local_default_model", LOCAL_DEFAULT_MODEL)
+
     # Build comprehensive context for chairman
     stage1_text = "\n\n".join([
         f"Model: {result['model']}\nResponse: {result['response']}"
@@ -167,12 +175,11 @@ Provide a clear, well-reasoned final answer that represents the council's collec
     messages = [{"role": "user", "content": chairman_prompt}]
 
     # Query the chairman model
-    chairman_model_used = CHAIRMAN_MODEL
     response = await query_model(chairman_model_used, messages)
 
     # Fallback to local default if the requested model is missing when using Ollama
-    if response is None and LLM_PROVIDER == "ollama" and CHAIRMAN_MODEL != LOCAL_DEFAULT_MODEL:
-        chairman_model_used = LOCAL_DEFAULT_MODEL
+    if response is None and provider == "ollama" and chairman_model_used != local_default_model:
+        chairman_model_used = local_default_model
         response = await query_model(chairman_model_used, messages)
 
     if response is None:
@@ -198,7 +205,7 @@ def parse_ranking_from_text(ranking_text: str) -> List[str]:
         ranking_text: The full text response from the model
 
     Returns:
-        List of response labels in ranked order
+        List of ranking labels in order (e.g., ["Response A", "Response B"])
     """
     import re
 
@@ -281,6 +288,11 @@ async def generate_conversation_title(user_query: str) -> str:
     Returns:
         A short title (3-5 words)
     """
+    settings = get_settings()
+    title_model_used = settings.get("title_model", LOCAL_DEFAULT_MODEL)
+    provider = settings.get("llm_provider", "openrouter")
+    local_default_model = settings.get("local_default_model", LOCAL_DEFAULT_MODEL)
+
     title_prompt = f"""Generate a very short title (3-5 words maximum) that summarizes the following question.
 The title should be concise and descriptive. Do not use quotes or punctuation in the title.
 
@@ -291,12 +303,11 @@ Title:"""
     messages = [{"role": "user", "content": title_prompt}]
 
     # Use the configured model for title generation
-    title_model_used = TITLE_MODEL
     response = await query_model(title_model_used, messages, timeout=30.0)
 
     # If the preferred model is unavailable on Ollama, fall back to the configured local default
-    if response is None and LLM_PROVIDER == "ollama" and TITLE_MODEL != LOCAL_DEFAULT_MODEL:
-        title_model_used = LOCAL_DEFAULT_MODEL
+    if response is None and provider == "ollama" and title_model_used != local_default_model:
+        title_model_used = local_default_model
         response = await query_model(title_model_used, messages, timeout=30.0)
 
     if response is None:

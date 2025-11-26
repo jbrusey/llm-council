@@ -1,16 +1,25 @@
 """FastAPI backend for LLM Council."""
 
+import asyncio
+import json
+import uuid
+from typing import List, Dict, Any, Optional
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import List, Dict, Any
-import uuid
-import json
-import asyncio
 
-from . import storage
-from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
+from . import storage, ollama
+from .council import (
+    run_full_council,
+    generate_conversation_title,
+    stage1_collect_responses,
+    stage2_collect_rankings,
+    stage3_synthesize_final,
+    calculate_aggregate_rankings,
+)
+from .settings import get_settings, update_settings
 
 app = FastAPI(title="LLM Council API")
 
@@ -26,16 +35,19 @@ app.add_middleware(
 
 class CreateConversationRequest(BaseModel):
     """Request to create a new conversation."""
+
     pass
 
 
 class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
+
     content: str
 
 
 class ConversationMetadata(BaseModel):
     """Conversation metadata for list view."""
+
     id: str
     created_at: str
     title: str
@@ -44,27 +56,70 @@ class ConversationMetadata(BaseModel):
 
 class Conversation(BaseModel):
     """Full conversation with all messages."""
+
     id: str
     created_at: str
     title: str
     messages: List[Dict[str, Any]]
 
 
+class SettingsUpdate(BaseModel):
+    """Partial settings update payload."""
+
+    llm_provider: Optional[str] = None
+    council_models: Optional[List[str]] = None
+    chairman_model: Optional[str] = None
+    title_model: Optional[str] = None
+    ollama_api_url: Optional[str] = None
+    local_default_model: Optional[str] = None
+
+
 @app.get("/")
 async def root():
     """Health check endpoint."""
+
     return {"status": "ok", "service": "LLM Council API"}
+
+
+@app.get("/api/settings")
+async def read_settings():
+    """Return the current runtime settings."""
+
+    return get_settings()
+
+
+@app.post("/api/settings")
+async def write_settings(payload: SettingsUpdate):
+    """Update runtime settings and persist them."""
+
+    if payload.llm_provider and payload.llm_provider.lower() not in {"openrouter", "ollama"}:
+        raise HTTPException(status_code=400, detail="Invalid llm_provider value")
+
+    updated = update_settings(payload.dict())
+    return updated
+
+
+@app.get("/api/ollama/models")
+async def list_ollama_models():
+    """Return available Ollama models from the configured endpoint."""
+
+    models = await ollama.list_models()
+    if not models:
+        raise HTTPException(status_code=502, detail="Unable to fetch Ollama models")
+    return models
 
 
 @app.get("/api/conversations", response_model=List[ConversationMetadata])
 async def list_conversations():
     """List all conversations (metadata only)."""
+
     return storage.list_conversations()
 
 
 @app.post("/api/conversations", response_model=Conversation)
 async def create_conversation(request: CreateConversationRequest):
     """Create a new conversation."""
+
     conversation_id = str(uuid.uuid4())
     conversation = storage.create_conversation(conversation_id)
     return conversation
@@ -73,6 +128,7 @@ async def create_conversation(request: CreateConversationRequest):
 @app.get("/api/conversations/{conversation_id}", response_model=Conversation)
 async def get_conversation(conversation_id: str):
     """Get a specific conversation with all its messages."""
+
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")

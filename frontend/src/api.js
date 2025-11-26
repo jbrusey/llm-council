@@ -112,4 +112,45 @@ export const api = {
       }
     }
   },
+
+  /**
+   * Fetch current runtime settings.
+   */
+  async getSettings() {
+    const response = await fetch(`${API_BASE}/api/settings`);
+    if (!response.ok) {
+      throw new Error('Failed to load settings');
+    }
+    return response.json();
+  },
+
+  /**
+   * Update runtime settings.
+   */
+  async updateSettings(payload) {
+    const response = await fetch(`${API_BASE}/api/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to update settings');
+    }
+    return response.json();
+  },
+
+  /**
+   * Retrieve available Ollama models from the backend.
+   */
+  async listOllamaModels() {
+    const response = await fetch(`${API_BASE}/api/ollama/models`);
+    if (!response.ok) {
+      throw new Error('Failed to load Ollama models');
+    }
+    return response.json();
+  },
 };
