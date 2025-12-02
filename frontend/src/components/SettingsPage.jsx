@@ -85,6 +85,10 @@ export default function SettingsPage({ onClose }) {
     }
   };
 
+  const handlePromptChange = (key, value) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
   const ollamaModelNames = useMemo(
     () => (ollamaModels || []).map((model) => model.name).filter(Boolean),
     [ollamaModels]
@@ -245,6 +249,49 @@ export default function SettingsPage({ onClose }) {
             />
           )}
           <p className="muted">Controls the short titles shown in the sidebar.</p>
+        </div>
+
+        <div className="prompt-section">
+          <div className="section-header">
+            <h3>Prompt templates</h3>
+            <p className="muted">
+              Customize the language each LLM sees when generating rankings, synthesizing the final answer, and creating
+              conversation titles. Use the placeholders shown beneath each field to inject dynamic context.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="ranking-prompt">Ranking prompt</label>
+            <textarea
+              id="ranking-prompt"
+              value={settings.ranking_prompt || ''}
+              onChange={(e) => handlePromptChange('ranking_prompt', e.target.value)}
+              rows={10}
+            />
+            <p className="muted">Available placeholders: {`{user_query}, {responses_text}`}</p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="chairman-prompt">Chairman synthesis prompt</label>
+            <textarea
+              id="chairman-prompt"
+              value={settings.chairman_prompt || ''}
+              onChange={(e) => handlePromptChange('chairman_prompt', e.target.value)}
+              rows={10}
+            />
+            <p className="muted">Available placeholders: {`{user_query}, {stage1_text}, {stage2_text}`}</p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="title-prompt">Title generation prompt</label>
+            <textarea
+              id="title-prompt"
+              value={settings.title_prompt || ''}
+              onChange={(e) => handlePromptChange('title_prompt', e.target.value)}
+              rows={6}
+            />
+            <p className="muted">Available placeholders: {`{user_query}`}</p>
+          </div>
         </div>
       </div>
     </div>

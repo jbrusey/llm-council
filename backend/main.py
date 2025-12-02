@@ -72,6 +72,9 @@ class SettingsUpdate(BaseModel):
     title_model: Optional[str] = None
     ollama_api_url: Optional[str] = None
     local_default_model: Optional[str] = None
+    ranking_prompt: Optional[str] = None
+    chairman_prompt: Optional[str] = None
+    title_prompt: Optional[str] = None
 
 
 @app.get("/")
